@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.NetworkInformation;
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 class Program
@@ -21,7 +23,17 @@ class Program
         Console.WriteLine(JsonSerializer.Serialize(data));
             
             
+
+
         Console.WriteLine("How many comments each user left:");
+
+        var userComments = context.BlogComments
+            .GroupBy(b => b.UserName)
+            .Select(b => new { count = b.Count(), userName = b.Select(b => b.UserName).First() })
+            .ToList();
+        Console.WriteLine(JsonSerializer.Serialize(userComments));
+
+
         //ToDo: write a query and dump the data to console
         // Expected result (format could be different, e.g. object serialized to JSON is ok):
         // Ivan: 4
@@ -29,6 +41,19 @@ class Program
         // Elena: 3
 
         Console.WriteLine("Posts ordered by date of last comment. Result should include text of last comment:");
+
+        //var commentsQuery = context.BlogComments.OrderByDescending(b => b.CreatedDate).Take(1).Single();
+        var posts = context.BlogPosts
+            .Select(p => new {
+                postName = p.Title,
+                date = p.Comments.OrderByDescending(b => b.CreatedDate).Take(1).Single().CreatedDate,
+                text = p.Comments.OrderByDescending(b => b.CreatedDate).Take(1).Single().Text
+            })
+            .OrderByDescending(p => p.date)
+            .ToList();
+        Console.WriteLine(JsonSerializer.Serialize(posts));
+
+
         //ToDo: write a query and dump the data to console
         // Expected result (format could be different, e.g. object serialized to JSON is ok):
         // Post2: '2020-03-06', '4'
@@ -37,13 +62,26 @@ class Program
 
 
         Console.WriteLine("How many last comments each user left:");
-        // 'last comment' is the latest Comment in each Post
+
+        var userLastComments = context.BlogPosts
+            .Select(p => new {
+                userName = p.Comments.OrderByDescending(b => b.CreatedDate).Take(1).Single().UserName
+            })
+            .GroupBy(b => b.userName)
+            .Select(b => new {
+                count = b.Count(),
+                userName = b.Select(x => x.userName).First()
+            })
+            .ToList();
+        Console.WriteLine(JsonSerializer.Serialize(userLastComments));
+
+
         //ToDo: write a query and dump the data to console
         // Expected result (format could be different, e.g. object serialized to JSON is ok):
         // Ivan: 2
         // Petr: 1
 
-            
+
         // Console.WriteLine(
         //     JsonSerializer.Serialize(BlogService.NumberOfCommentsPerUser(context)));
         // Console.WriteLine(
